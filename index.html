@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QCon 小红书专场 · Agent 驱动的研发效率工程探索与实践 · 会议纪要</title>
+<style>
+:root {
+  --bg: #0b1020;
+  --bg-2: #111835;
+  --bg-card: #161e3e;
+  --bg-card-2: #1c2447;
+  --accent: #6c8cff;
+  --accent-2: #b07aff;
+  --accent-3: #5fe2c8;
+  --text: #e8ecf6;
+  --text-dim: #a0a8c0;
+  --text-mute: #6c7494;
+  --border: #25305a;
+  --hl: rgba(108, 140, 255, 0.12);
+  --code-bg: #0d1430;
+  --shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px; line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(108, 140, 255, 0.18), transparent 60%),
+    radial-gradient(1000px 500px at 100% 0%, rgba(176, 122, 255, 0.15), transparent 60%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* === Hero === */
+.hero {
+  padding: 64px 32px 48px;
+  max-width: 1180px; margin: 0 auto;
+  border-bottom: 1px solid var(--border);
+}
+.hero .badge {
+  display: inline-block; padding: 4px 12px;
+  border: 1px solid var(--accent); border-radius: 999px;
+  color: var(--accent); font-size: 12px; letter-spacing: 1px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 12px; font-size: 38px; font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  line-height: 1.25;
+}
+.hero .subtitle { color: var(--text-dim); font-size: 16px; margin-bottom: 24px; }
+.hero .meta { display: flex; flex-wrap: wrap; gap: 14px; }
+.hero .meta-item {
+  background: var(--bg-card); border: 1px solid var(--border);
+  padding: 8px 14px; border-radius: 8px;
+  font-size: 13px; color: var(--text-dim);
+}
+.hero .meta-item strong { color: var(--text); margin-right: 6px; }
+
+/* === Container === */
+.container { max-width: 1180px; margin: 0 auto; padding: 40px 32px 80px; }
+
+/* === Agenda timeline === */
+.agenda { margin-bottom: 56px; }
+.section-title {
+  font-size: 22px; font-weight: 600; margin: 0 0 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::before {
+  content: ""; width: 4px; height: 22px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  border-radius: 2px;
+}
+.timeline { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.timeline-item {
+  display: grid; grid-template-columns: 130px 1fr auto;
+  gap: 16px; padding: 18px 20px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; transition: all 0.2s;
+}
+.timeline-item:hover {
+  background: var(--bg-card-2); border-color: var(--accent);
+  transform: translateX(2px);
+}
+.timeline-time {
+  color: var(--accent); font-weight: 600;
+  font-feature-settings: "tnum"; font-size: 14px;
+}
+.timeline-content .topic {
+  color: var(--text); font-weight: 500;
+  margin-bottom: 6px; font-size: 15px; line-height: 1.5;
+}
+.timeline-content .speaker { color: var(--text-dim); font-size: 13px; }
+.timeline-status {
+  align-self: center; padding: 4px 10px;
+  border-radius: 6px; font-size: 12px; font-weight: 500;
+}
+.status-done {
+  background: rgba(95, 226, 200, 0.15);
+  color: var(--accent-3);
+  border: 1px solid rgba(95, 226, 200, 0.3);
+}
+.status-pending {
+  background: rgba(160, 168, 192, 0.1);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+.flow-note {
+  margin-top: 20px; padding: 14px 18px;
+  background: var(--hl); border-left: 3px solid var(--accent);
+  border-radius: 6px; color: var(--text-dim); font-size: 14px;
+}
+.flow-note strong { color: var(--text); }
+
+/* === Speech card === */
+.speech {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; margin-bottom: 24px; overflow: hidden;
+  transition: border-color 0.2s;
+}
+.speech:hover { border-color: rgba(108, 140, 255, 0.4); }
+.speech-header {
+  padding: 22px 26px; cursor: pointer;
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 18px; align-items: center; user-select: none;
+}
+.speech-num {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 17px; color: white; flex-shrink: 0;
+}
+.speech-title-block .speech-title {
+  font-size: 18px; font-weight: 600; margin: 0 0 6px;
+  line-height: 1.4; color: var(--text);
+}
+.speech-title-block .speech-meta { font-size: 13px; color: var(--text-dim); }
+.speech-title-block .speech-meta .sep { margin: 0 8px; color: var(--text-mute); }
+.toggle-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg-2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+  transition: transform 0.25s, background 0.2s; flex-shrink: 0;
+}
+.speech.open .toggle-icon {
+  transform: rotate(180deg);
+  background: var(--accent); color: white; border-color: var(--accent);
+}
+.speech-body { display: none; padding: 0 26px 28px; border-top: 1px solid var(--border); }
+.speech.open .speech-body { display: block; }
+
+/* === Key Takeaways (textarea) === */
+.takeaways {
+  margin: 8px 0 56px;
+  background: linear-gradient(135deg, rgba(108, 140, 255, 0.10), rgba(176, 122, 255, 0.08));
+  border: 1px solid rgba(108, 140, 255, 0.28);
+  border-radius: 14px; padding: 22px 24px 20px;
+  position: relative; overflow: hidden;
+}
+.takeaways::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+  opacity: 0.85;
+}
+.takeaways-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+}
+.takeaways-title {
+  font-size: 18px; font-weight: 600; letter-spacing: 0.3px;
+  color: var(--text); display: flex; align-items: center; gap: 10px;
+}
+.takeaways-title::before { content: "✦"; color: var(--accent-2); font-size: 18px; }
+.takeaways-subtitle {
+  color: var(--text-mute); font-size: 12px; font-weight: normal;
+  margin-left: 8px; letter-spacing: 0;
+}
+.takeaways-status {
+  font-size: 12px; color: var(--text-mute);
+  font-style: italic; transition: color 0.3s;
+}
+.takeaways-status.saved { color: var(--accent-3); }
+.takeaways textarea {
+  width: 100%; min-height: 110px;
+  background: rgba(11, 16, 32, 0.55);
+  border: 1px solid rgba(108, 140, 255, 0.22);
+  border-radius: 10px; padding: 14px 16px;
+  color: var(--text); font-family: inherit;
+  font-size: 14.5px; line-height: 1.7; resize: vertical;
+  transition: border-color 0.15s, background 0.15s;
+}
+.takeaways textarea:focus {
+  outline: none; border-color: var(--accent);
+  background: rgba(11, 16, 32, 0.75);
+  box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.12);
+}
+.takeaways textarea::placeholder { color: var(--text-mute); font-style: italic; }
+
+.takeaways-curated {
+  margin: 0 0 14px;
+  padding: 14px 16px 6px;
+  background: rgba(11, 16, 32, 0.45);
+  border: 1px solid rgba(108, 140, 255, 0.18);
+  border-radius: 10px;
+}
+.takeaways-curated .label {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--accent-3);
+  background: rgba(95, 226, 200, 0.10);
+  border: 1px solid rgba(95, 226, 200, 0.25);
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+.takeaways-curated ol {
+  margin: 0; padding-left: 22px;
+  color: var(--text);
+  font-size: 14.5px; line-height: 1.85;
+}
+.takeaways-curated ol li { margin: 4px 0; }
+.takeaways-curated ol li::marker { color: var(--accent); font-weight: 600; }
+.takeaways-curated strong { color: #fff; font-weight: 600; }
+.takeaways-curated em { color: var(--accent-3); font-style: normal; }
+.takeaways-curated code {
+  background: var(--code-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: var(--accent-3);
+}
+.takeaways-divider {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 11px; letter-spacing: 1px;
+  color: var(--text-mute); text-transform: uppercase;
+  margin: 14px 0 10px;
+}
+.takeaways-divider::before,
+.takeaways-divider::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* === Tabs === */
+.tabs {
+  display: flex; gap: 4px; margin: 18px 0 24px;
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 4px; width: fit-content;
+}
+.tab {
+  padding: 8px 18px; font-size: 13px; color: var(--text-dim);
+  background: transparent; border: none; border-radius: 7px;
+  cursor: pointer; font-weight: 500;
+  transition: all 0.15s; font-family: inherit;
+}
+.tab.active { background: var(--accent); color: white; }
+.tab:not(.active):hover { color: var(--text); background: var(--bg-card-2); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* === Markdown content === */
+.md h1, .md h2, .md h3, .md h4 { color: var(--text); margin: 28px 0 12px; line-height: 1.4; }
+.md h2 { font-size: 20px; font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.md h3 { font-size: 16px; font-weight: 600; color: var(--accent); }
+.md h4 { font-size: 14px; font-weight: 600; color: var(--accent-2); }
+.md p { margin: 10px 0; color: var(--text); }
+.md ul, .md ol { padding-left: 24px; margin: 10px 0; }
+.md li { margin: 6px 0; color: var(--text); }
+.md li::marker { color: var(--accent); }
+.md strong { color: #fff; font-weight: 600; }
+.md em { color: var(--accent-3); font-style: normal; }
+.md blockquote {
+  border-left: 3px solid var(--accent);
+  background: var(--hl);
+  padding: 12px 18px; margin: 16px 0;
+  border-radius: 0 8px 8px 0; color: var(--text-dim);
+}
+.md blockquote p { margin: 4px 0; }
+.md blockquote h4 { color: var(--accent); margin-top: 4px; }
+.md code {
+  background: var(--code-bg); padding: 2px 6px;
+  border-radius: 4px; font-size: 13px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: var(--accent-3);
+}
+.md hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+.md table {
+  width: 100%; border-collapse: collapse; margin: 16px 0;
+  font-size: 14px; background: var(--bg-2);
+  border-radius: 8px; overflow: hidden;
+}
+.md th, .md td {
+  padding: 10px 14px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.md th { background: var(--bg-card-2); color: var(--text); font-weight: 600; font-size: 13px; }
+.md tr:last-child td { border-bottom: none; }
+
+/* Raw transcript view */
+.transcript-raw {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 18px 20px;
+  font-size: 13.5px; line-height: 1.85; color: var(--text-dim);
+  white-space: pre-wrap; max-height: 640px; overflow: auto;
+  font-family: "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+}
+.transcript-raw .ts { color: var(--accent); font-weight: 600; }
+.transcript-raw .spk { color: var(--accent-2); }
+.transcript-meta {
+  font-size: 12px; color: var(--text-mute);
+  margin-bottom: 10px; display: flex; gap: 16px; flex-wrap: wrap;
+}
+.transcript-meta strong { color: var(--text-dim); }
+
+/* === Side Nav === */
+.side-nav {
+  position: fixed; top: 50%; right: 24px; transform: translateY(-50%);
+  z-index: 100;
+  background: rgba(17, 24, 53, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.side-nav.visible { opacity: 1; pointer-events: auto; }
+.side-nav-title {
+  font-size: 11px; letter-spacing: 1px; color: var(--text-mute);
+  text-transform: uppercase;
+  padding: 4px 12px 6px; border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.side-nav a {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-radius: 7px;
+  color: var(--text-dim); text-decoration: none; font-size: 13px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.side-nav a:hover { background: var(--bg-card-2); color: var(--text); }
+.side-nav a.active {
+  background: rgba(108, 140, 255, 0.15);
+  color: var(--accent); font-weight: 500;
+}
+.side-nav a .nav-num {
+  width: 18px; height: 18px; border-radius: 4px;
+  background: var(--bg-2); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; color: var(--text-dim);
+  flex-shrink: 0;
+}
+.side-nav a.active .nav-num {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent; color: white;
+}
+.side-nav-divider { height: 1px; background: var(--border); margin: 6px 8px; }
+.back-to-top { cursor: pointer; }
+
+.nav-toggle {
+  display: none;
+  position: fixed; bottom: 24px; right: 20px;
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none; color: white; font-size: 20px; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(108, 140, 255, 0.4);
+  z-index: 101; align-items: center; justify-content: center;
+}
+
+.footer {
+  text-align: center; padding: 30px 20px;
+  color: var(--text-mute); font-size: 12px;
+  border-top: 1px solid var(--border); margin-top: 40px;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+
+@media (max-width: 1240px) { .side-nav { right: 12px; min-width: 160px; } }
+@media (max-width: 1080px) {
+  .side-nav {
+    top: auto; bottom: 80px; right: 20px;
+    transform: none; max-height: 70vh; overflow-y: auto;
+  }
+  .side-nav.visible { transform: none; }
+  .nav-toggle { display: flex; }
+  .side-nav:not(.mobile-open) { opacity: 0; pointer-events: none; }
+  .side-nav.mobile-open { opacity: 1; pointer-events: auto; }
+}
+@media (max-width: 720px) {
+  .hero { padding: 40px 20px 32px; }
+  .hero h1 { font-size: 26px; }
+  .container { padding: 28px 20px 60px; }
+  .timeline-item { grid-template-columns: 1fr; gap: 6px; }
+  .timeline-time { font-size: 13px; }
+  .speech-header { padding: 18px; gap: 12px; }
+  .speech-num { width: 36px; height: 36px; font-size: 14px; }
+  .speech-title-block .speech-title { font-size: 15px; }
+  .speech-body { padding: 0 18px 22px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Side Navigation ===== -->
+<button class="nav-toggle" id="nav-toggle" aria-label="目录">☰</button>
+<nav class="side-nav" id="side-nav">
+  <div class="side-nav-title">目录</div>
+  <a href="#agenda" data-target="agenda">📅 议程</a>
+  <a href="#takeaways" data-target="takeaways">✦ Key Takeaways</a>
+  <div class="side-nav-divider"></div>
+  <a href="#speech-1" data-target="speech-1"><span class="nav-num">1</span>郝栩彬@小红书</a>
+  <a href="#speech-2" data-target="speech-2"><span class="nav-num">2</span>李伟@小红书</a>
+  <a href="#speech-3" data-target="speech-3"><span class="nav-num">3</span>陈圣@小红书</a>
+  <a href="#speech-4" data-target="speech-4"><span class="nav-num">4</span>肖俊@小红书</a>
+  <div class="side-nav-divider"></div>
+  <a href="#top" class="back-to-top">↑ 回到顶部</a>
+</nav>
+
+<div class="hero" id="top">
+  <div class="badge">QCON · 小红书专场</div>
+  <h1>0522 小红书专场 · Agent 驱动的<br>研发效率工程探索与实践</h1>
+  <div class="subtitle">出品人：白路 · 4 位 AI 工程架构师围绕代码理解、链路变更、压测建模与端到端测试，呈现 Agent 工程化落地的完整切片</div>
+  <div class="meta">
+    <div class="meta-item"><strong>日期</strong>2026-05-22</div>
+    <div class="meta-item"><strong>专场</strong>小红书 · Agent 驱动研发效率</div>
+    <div class="meta-item"><strong>进度</strong>4 场已完成 4 场</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ===== 议程 ===== -->
+  <div class="agenda" id="agenda">
+    <h2 class="section-title">📅 议程</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-time">演讲 1</div>
+        <div class="timeline-content">
+          <div class="topic">亿级 Token 知识库的 Agentic 生成：企业级 Wiki 工程实践</div>
+          <div class="speaker">郝栩彬 · 小红书 AI 工程架构师 / 上下文工程与长程任务的代码仓库知识化</div>
+        </div>
+        <div class="timeline-status status-done">✓ 已完成</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">演讲 2</div>
+        <div class="timeline-content">
+          <div class="topic">基于 Multi-Agent 的 B/C 数据链路变更自动化保障</div>
+          <div class="speaker">李伟 · 小红书 AI 工程架构师 / 广告链路 16 种数据协议的一句话变更</div>
+        </div>
+        <div class="timeline-status status-done">✓ 已完成</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">中场休息</div>
+        <div class="timeline-content">
+          <div class="topic">交流答疑、讲师扫码、技术交流群进群</div>
+          <div class="speaker">—</div>
+        </div>
+        <div class="timeline-status status-pending">休息</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">演讲 3</div>
+        <div class="timeline-content">
+          <div class="topic">大模型压测数据构造：质量跃迁之路——从能跑到真管用</div>
+          <div class="speaker">陈圣 · 小红书 AI 工程架构师 / 把"造请求"升级为"建模负载"</div>
+        </div>
+        <div class="timeline-status status-done">✓ 已完成</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-time">演讲 4</div>
+        <div class="timeline-content">
+          <div class="topic">LLM 驱动端到端测试体系</div>
+          <div class="speaker">肖俊 · 小红书 AI 工程架构师 / 让 AI 直接感知后端原生接口、自写脚本</div>
+        </div>
+        <div class="timeline-status status-done">✓ 已完成</div>
+      </div>
+    </div>
+    <div class="flow-note">
+      <strong>整场脉络：</strong>代码仓库 → 上下文工程化（Speech 1） → 业务流程 → Multi-Agent 编排（Speech 2） → 模型稳定性 → 负载建模（Speech 3） → 测试范式 → AI 自主写脚本（Speech 4）
+    </div>
+  </div>
+
+  <!-- ===== Key Takeaways ===== -->
+  <div class="takeaways" id="takeaways">
+    <div class="takeaways-header">
+      <div class="takeaways-title">
+        Key Takeaways
+        <span class="takeaways-subtitle">写下你的全场要点（自动保存到本地）</span>
+      </div>
+      <div class="takeaways-status" id="takeaways-status">未编辑</div>
+    </div>
+
+    <div class="takeaways-curated">
+      <span class="label">编辑部整理 · 7 条</span>
+      <ol>
+        <li><strong>上下文是新的瓶颈，不是模型能力。</strong>千万行代码、上亿 Token 的仓库不能"一次喂完"，必须按目录、领域、章节做<em>正交拆解</em>，再用代理按章生成。</li>
+        <li><strong>大模型长上下文 ≠ 全精度上下文。</strong>200K~1M 的窗口在 500K 之后准确率显著下滑，DeepSeek V4 / 4.7 OF 等评测显示长上下文仍以"搜索任务"为训练范式，做生成时需谨慎使用。</li>
+        <li><strong>Agent 工程的主战场，是给模型"更准上下文 + 更稳执行环境"。</strong>Loop 代码已从万行回落到千行级，焦点转向工具、记忆、回放与回滚。</li>
+        <li><strong>"自然语言驱动 + Multi-Agent 编排"是中后台流程改造的可行路径。</strong>李伟把 3~5 天、跨 3 个团队的字段变更，压到 <code>2~3 小时</code>一句话完成，每天 token 成本仅 10 余元。</li>
+        <li><strong>压测是负载建模，不是请求构造。</strong>真实性、覆盖度、复杂度、有效性<em>四难</em>，决定了压测结果是否可被信任；过度拟合线上 = 低估未来风险。</li>
+        <li><strong>测试 Agent 的关键，不在 prompt 技巧，而在业务知识库结构 + 调试经验沉淀。</strong>RAG 不适合测试用例规划——召回不全就意味着漏测。</li>
+        <li><strong>记忆让 Agent 越用越聪明。</strong>知识库（领域、接口、知识）+ 脚本经验（成功路径、踩坑沉淀）双库联用，10~20 个用例后新用例的一次成功率显著抬升。</li>
+      </ol>
+    </div>
+
+    <div class="takeaways-divider">你的笔记</div>
+    <textarea id="takeaways-input" placeholder="在这里补充你自己的要点，自动保存到本地浏览器…"></textarea>
+  </div>
+
+  <!-- ===== Speech 列表 ===== -->
+  <h2 class="section-title" id="speeches">演讲纪要</h2>
+
+  <!-- ============ Speech 1 ============ -->
+  <div class="speech open" id="speech-1">
+    <div class="speech-header" onclick="toggleSpeech('speech-1')">
+      <div class="speech-num">1</div>
+      <div class="speech-title-block">
+        <div class="speech-title">亿级 Token 知识库的 Agentic 生成：企业级 Wiki 工程实践</div>
+        <div class="speech-meta">
+          <span>郝栩彬</span><span class="sep">|</span>
+          <span>小红书 · AI 工程架构师</span><span class="sep">|</span>
+          <span>上下文工程 / 长程任务</span>
+        </div>
+      </div>
+      <div class="toggle-icon">▾</div>
+    </div>
+    <div class="speech-body">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this, 'tab-1-summary')">📝 整理纪要</button>
+        <button class="tab" onclick="switchTab(this, 'tab-1-raw')">🎙️ 录音转写</button>
+      </div>
+
+      <div class="tab-content active md" id="tab-1-summary">
+        <h2>一、AI Coding 两年范式迁移：从提示词到 Agentic</h2>
+        <ul>
+          <li><strong>24 年 · 提示词工程。</strong>圈选 20 行代码 → 让模型解释 → 单次拼接、强幻觉，很快触顶。</li>
+          <li><strong>25 年初 · 上下文工程 + Code Review。</strong>用 AST / Transformer 拼接函数上下游，再交给模型；同期代码补全、代码审查同时火热。</li>
+          <li><strong>25 年中 · Coding Agent 成为主力。</strong>Claude / Local Code 类 Agent 进入视野，Loop 代码从上万行降到千行级；工作重心彻底转向"<em>给模型更准上下文 + 更稳执行环境</em>"。</li>
+          <li><strong>26 年 · 通用 Coding Agent 趋近 SWE-Bench 饱和。</strong>Anthropic Lighthouse 等模型已"摸到 API 边界"；研发需求从"补全/审查"升级为"端到端交付的数字员工"。</li>
+        </ul>
+
+        <h2>二、为什么"上下文是被吃掉的"——一笔账</h2>
+        <p>讲者把"用 200K 上下文模型理解一个 60 万行 Android 仓库"作为压力测试，逐项拆解上下文消耗结构：</p>
+        <ul>
+          <li><strong>代码本身。</strong>业务代码 ≈ 15 token / 行，10 行代码就吃掉 200K 上下文的可见量级；100 章节 × 50~100K → 不做优化、纯靠模型完全跑不动。</li>
+          <li><strong>文件路径——隐形消耗大户。</strong>一行 Java/Python 路径就要 30~50 token。早期 Local Code / Code Plugin 直接展开整棵目录树，"2/3 的上下文被路径吃掉"。</li>
+          <li><strong>真实数字。</strong>小红书 Android 仓 60 万文件，光文件名 ≈ <strong>180 万 token</strong>，远超任何模型上下文。</li>
+        </ul>
+
+        <blockquote>
+          <h4>关于"长上下文 ≠ 全精度上下文"</h4>
+          <p>讲者当周与 Gemini 长上下文核心开发者 Andrew Guy 在中国大陆交流。结论是：当前所有 1M 级长上下文模型，前段精度高、500K~600K 中段精度显著下滑。原因有二：MRCR / 大海捞针评测只能验证"末尾召回"，且训练任务以搜索为主，奖励反馈来自搜索准确性。</p>
+          <p>典型案例：DeepSeek V3.2 凭 NSA + MHA KV-Cache 压缩把长上下文成本打到极低，团队第一时间尝试"把所有候选直接塞 1M 上下文每次追问"，<strong>实际不可行</strong>；DeepSeek V4 长上下文精度也下降了，原因之一是为压成本减少了 MoE 激活专家。</p>
+        </blockquote>
+
+        <h2>三、CodeWiki 核心策略：从"读完仓库"到"正交拆解"</h2>
+        <p>面对 60 万行、200K 上下文的不匹配，方案是<strong>不做一次性整仓阅读</strong>，而是拆成足够正交、足够完整的小任务，逐个击破。整体落到两阶段。</p>
+
+        <h3>阶段 1 · 大纲生成（战术师视角）</h3>
+        <ul>
+          <li>用粗粒度阅读 + 不断分片，把仓库拆成"50 片左右、每片 ≈ 5000 文件"。</li>
+          <li>大纲 Agent 看更多、看更远，不下钻细节，逐层展开形成全局结构与章节列表。</li>
+          <li>大纲生成阶段成本被压到全流程的 ~10%，"节省 90% 成本"主要靠这里。</li>
+        </ul>
+
+        <h3>阶段 2 · 内容生成（按章节启子 Agent）</h3>
+        <ul>
+          <li>每个章节 = 一个独立子智能体启动指令；子 Agent 内部递归拆图、生成、合并。</li>
+          <li>关键技巧：<strong>压缩用于探索期，因果递归用于真正写内容时</strong>——让模型在写作阶段保持在同一表达空间。</li>
+          <li>抽取与映射靠"模板 + 实体"，企业级仓库本身目录划分相对规整，可大幅减少模型的盲猜。</li>
+        </ul>
+
+        <h3>工程化细节</h3>
+        <ul>
+          <li>使用 <code>rank</code> + <code>batch</code> 两类工具——对应 DeepSeek 在 SWE-Bench 技术报告里"接近 80 分"的实测组合。</li>
+          <li>判断项 / 辩论项全部以代词形式注入，避免 "Home dash" 类词被模型直接捕获造成方向偏差。</li>
+          <li>地理 / 业务向量等"非代码信息"也作为子节点辅助上下文（业内有公开案例：相关请求的相关门店大概率落在同一地理区域）。</li>
+        </ul>
+
+        <h2>四、产品成果 · 周期与成本</h2>
+        <ul>
+          <li>覆盖小红书全部"热门商户"（仓）级代码库，周期性全量更新一次。</li>
+          <li><strong>整月成本约 ¥300。</strong>给所有热门仓生成结构化知识文档，"无论从覆盖还是成本看都很划算"。</li>
+          <li>可同时服务"人快速上手陌生仓"和"AI 拿来作为代码理解输入"两类消费者。</li>
+        </ul>
+
+        <h2>五、个人观点 · 长程任务作为团队准入门槛</h2>
+        <blockquote>
+          <p>讲者认为<em>"代码仓库 → Wiki"</em> 适合作为团队 / 阶段性能力的考题：评估生成对不对、接口文档准不准，一眼可看；任务要素丰富——多智能体、长时序、稳定运行、上下文压缩与裁剪缺一不可。"如果你是一个团队，这东西非常适合作为准入门槛。"</p>
+        </blockquote>
+
+        <h2>六、现场问答精选</h2>
+        <ul>
+          <li><strong>Q · 对超大单文件 / 预算敏感场景，是否需要预处理？</strong><br>需求侧质量高，但供应侧（模型）对"已通过/单点问答"反而表现好；解法仍是裁剪 + 上下文压缩组合，分情况注入。</li>
+          <li><strong>Q · 用 LDA 做主题划分，效果如何评估？</strong><br>没有哪种方法是终局——LDA 只是尝试方向之一，目前没有跨方法的对照实验，更多是基于直觉与离线评测；后续会把新方案放到群里讨论。</li>
+        </ul>
+      </div>
+
+      <div class="tab-content" id="tab-1-raw">
+        <div class="transcript-meta"><strong>来源：</strong>现场录音转写 · <strong>时长：</strong>约 50 分钟 · <strong>格式：</strong>带时间戳逐句稿</div>
+        <div class="transcript-raw" id="raw-1"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Speech 2 ============ -->
+  <div class="speech open" id="speech-2">
+    <div class="speech-header" onclick="toggleSpeech('speech-2')">
+      <div class="speech-num">2</div>
+      <div class="speech-title-block">
+        <div class="speech-title">基于 Multi-Agent 的 B/C 数据链路变更自动化保障</div>
+        <div class="speech-meta">
+          <span>李伟</span><span class="sep">|</span>
+          <span>小红书 · AI 工程架构师</span><span class="sep">|</span>
+          <span>广告链路 / 16 种数据协议</span>
+        </div>
+      </div>
+      <div class="toggle-icon">▾</div>
+    </div>
+    <div class="speech-body">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this, 'tab-2-summary')">📝 整理纪要</button>
+        <button class="tab" onclick="switchTab(this, 'tab-2-raw')">🎙️ 录音转写</button>
+      </div>
+
+      <div class="tab-content active md" id="tab-2-summary">
+        <h2>一、痛点 · 一次"加字段"的真实代价</h2>
+        <p>广告链路三层架构：<strong>B 端投放端 → 数据管道 → C 端在线层</strong>。每一次字段变更都涉及：</p>
+        <ul>
+          <li><strong>跨团队人传人。</strong>口头约定、群里沟通、命名 / 大小写不一致 → 端到端"失真"。</li>
+          <li><strong>影响面靠经验判断。</strong>把一个 <code>int8</code> 扩到 <code>int64</code>，下游所有服务是否同步扩容，无人能给出确定答案。</li>
+          <li><strong>追溯断裂。</strong>字段含义、当初为什么改、谁改的，半年后已无人可问。</li>
+          <li><strong>验证零散。</strong>每端各自验，端到端在群里"靠相信"，无统一验收标准。</li>
+        </ul>
+
+        <h2>二、目标态：一句话驱动的全链路自动化</h2>
+        <blockquote>
+          <p>研发在企业 IM 群里和 Agent 对话——表达一句"我要在 X 字段上加 Y 含义"——Agent 自动理解意图、识别影响面、串联各业务域子 Agent 完成执行、按节点收集人工审核、最终产出含背景 / 对话 / 验证结果的<strong>变更知识链报告</strong>。</p>
+        </blockquote>
+
+        <h2>三、产品架构 · 主从双层 Agent</h2>
+        <table>
+          <thead><tr><th>层</th><th>角色</th><th>关键能力</th></tr></thead>
+          <tbody>
+            <tr><td><strong>主引擎 Actor Engine</strong></td><td>监督 + 指挥官</td><td>意图理解 / 编排调度 / 影响面升级 / 人工卡控</td></tr>
+            <tr><td><strong>业务域子 Agent</strong></td><td>实际执行者</td><td>投放端 / 数据管道 / 在线索引各一个 SCP 子引擎，按 Skill 注册到主引擎</td></tr>
+            <tr><td><strong>能力底座</strong></td><td>对接厂内系统</td><td>变更平台、数据库、分布式配置、大数据任务、可观测、告警</td></tr>
+          </tbody>
+        </table>
+        <p>选用厂内开源的 Java 框架（讲者称 <code>aikm</code>）作为基座——天然适配厂内服务，原生集成可观测、变更平台等基础设施。</p>
+
+        <h2>四、四大关键挑战与解</h2>
+
+        <h3>挑战 1 · 字段血缘怎么自动维护？</h3>
+        <ul>
+          <li>对中间数据管道做<strong>白盒分析</strong>：扫代码仓 + 阿尔法分布式配置 + 投放端库表结构 + 在线索引层使用方。</li>
+          <li>每天凌晨全链路扫描一次校准，保证 B/C 端字段映射、上下游使用方在天级窗口内一致。</li>
+          <li>有了血缘 → 自动产出"影响哪些表、哪些服务、各自 Owner 是谁"的影响评估报告。</li>
+        </ul>
+
+        <h3>挑战 2 · 流程刚性 · 红线动作不能跳</h3>
+        <ul>
+          <li>核心动作（如发布上库、回滚高危）强制人工审核，研发"觉得流程麻烦"也不允许跳过。</li>
+          <li>每一步状态机管理 + 工单状态机叠加；超时、失败、A/B 验收不通过时支持节点回退与重试。</li>
+          <li>异常需要人工介入时及时上报，不允许"为了把流程跑快而让模型自作主张"。</li>
+        </ul>
+
+        <h3>挑战 3 · 长期记忆与知识沉淀</h3>
+        <ul>
+          <li>群聊原始对话、各 Action 执行详情、确认 / 澄清记录全量留痕，按需求工单组织。</li>
+          <li>每完成一次变更，自动回写血缘表 + 沉淀 Action 经验 → "<em>越用越聪明</em>"。</li>
+        </ul>
+
+        <h3>挑战 4 · 协议与通信</h3>
+        <ul>
+          <li>使用厂内自定义的 <code>SCP</code> 协议（HTTP / Socket 流式），主引擎与子 Agent 之间维护 Session。</li>
+          <li>同步任务流式回传；像分级发布这种持久任务则发单后<strong>定时轮询工单状态</strong>。</li>
+          <li>Skill 只定义能力约束（"你能做什么"），不定义实现，主引擎按需调用。</li>
+        </ul>
+
+        <h2>五、推广策略 · 如何让研发愿意用</h2>
+        <ul>
+          <li><strong>第一步：辅助模式。</strong>系统先生成变更方案给研发参考，不夺权；研发观察方案与自身经验贴合度。</li>
+          <li><strong>第二步：习惯转移。</strong>方案逐渐贴现，研发开始按 Agent 的方案走。</li>
+          <li><strong>第三步（激进）：权限回收。</strong>磨合一段时间后回收变更平台直接操作权限，倒逼上 Agent。</li>
+        </ul>
+
+        <h2>六、收益数据</h2>
+        <ul>
+          <li>变更周期：<strong>3~5 天 → 2~3 小时</strong>，最快 1 小时起。</li>
+          <li>变更遗漏 / 顺序错乱：<strong>降为零</strong>。</li>
+          <li>全链路 100% 可追溯。</li>
+          <li>每天 token 成本 ≈ <strong>10 余元</strong>。</li>
+        </ul>
+
+        <h2>七、现场问答精选</h2>
+        <ul>
+          <li><strong>Q · 跨部门隐性知识，Agent 怎么吸收？</strong><br>聚焦"数据链路"这个流程相对固定的子领域；隐性知识第一步靠字段血缘还原，第二步沉淀为 Action 知识，从而摆脱对个人经验的依赖。</li>
+          <li><strong>Q · 字段一直在变，怎么保证 Agent 拿到的不是过期版本？</strong><br>变更本身走 Agent → 完成后自动回写血缘；同时凌晨全量扫一遍代码与配置做 T+1 校准。</li>
+          <li><strong>Q · 整体 token 成本？</strong><br>每天 10 余元（千问类商用模型），相对人力跨团队协作的开销极低。</li>
+          <li><strong>Q · 怎么评估推广效果？</strong><br>前期半智能辅助阶段建立信任，再回收变更平台权限做硬切换；本质是"流程改造 + AI 工具"组合，不是单纯加工具。</li>
+          <li><strong>Q · SCP 协议在 Skill 与 Action 间怎么传 response？</strong><br>建会话拿 Session ID，再下发任务；同步走流式回传，异步走工单 + 轮询。</li>
+          <li><strong>Q · 工作流任务超时 / 审批超时如何管理？</strong><br>底层是传统服务 + 状态机，主引擎负责跨节点状态流转，每一步可重试 / 回退到指定节点。</li>
+        </ul>
+      </div>
+
+      <div class="tab-content" id="tab-2-raw">
+        <div class="transcript-meta"><strong>来源：</strong>现场录音转写 · <strong>时长：</strong>约 30 分钟（含 Q&A） · <strong>格式：</strong>带时间戳逐句稿</div>
+        <div class="transcript-raw" id="raw-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Speech 3 ============ -->
+  <div class="speech open" id="speech-3">
+    <div class="speech-header" onclick="toggleSpeech('speech-3')">
+      <div class="speech-num">3</div>
+      <div class="speech-title-block">
+        <div class="speech-title">大模型压测数据构造：质量跃迁之路——从能跑到真管用</div>
+        <div class="speech-meta">
+          <span>陈圣</span><span class="sep">|</span>
+          <span>小红书 · AI 工程架构师</span><span class="sep">|</span>
+          <span>AGE 团队 / 大模型稳定性保障</span>
+        </div>
+      </div>
+      <div class="toggle-icon">▾</div>
+    </div>
+    <div class="speech-body">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this, 'tab-3-summary')">📝 整理纪要</button>
+        <button class="tab" onclick="switchTab(this, 'tab-3-raw')">🎙️ 录音转写</button>
+      </div>
+
+      <div class="tab-content active md" id="tab-3-summary">
+        <blockquote>
+          <h4>开场镜头 · 为什么压测开始失效</h4>
+          <p>压测首轮上下文 20K，线上只有 12K；压测 thinking 占比 37%，线上只有 20%。<strong>数据错了，结论就没有意义。</strong>陈圣的演讲，就是讲怎么从"构造请求"走到"建模负载"。</p>
+        </blockquote>
+
+        <h2>一、传统压测 vs 模型压测</h2>
+        <table>
+          <thead><tr><th>维度</th><th>传统压测</th><th>模型压测</th></tr></thead>
+          <tbody>
+            <tr><td>输入结构</td><td>固定（cursor / uid / note_id）</td><td>不可枚举的自然语言</td></tr>
+            <tr><td>容量度量</td><td>QPS / RT / 错误率</td><td>TPS / 吞吐 / GPU 利用率</td></tr>
+            <tr><td>核心假设</td><td>流量 ≈ 请求数</td><td>流量 ≈ 内容分布与差分</td></tr>
+            <tr><td>风险面</td><td>主链路饱和</td><td>长尾、长上下文、多轮、工具调用</td></tr>
+          </tbody>
+        </table>
+
+        <h2>二、数据构造的"四难"</h2>
+        <ol>
+          <li><strong>真实性难还原。</strong>线上输入有长尾、输出规模差异大、上下文层次不一；压测样本却整齐划一 → 高估存储、低估 TPS、长尾误判。</li>
+          <li><strong>覆盖度难保障。</strong>新接业务往往只覆盖主链路、高频卡片；POI、外部依赖、复杂检索工具被漏掉，复杂度瓶颈不暴露。</li>
+          <li><strong>复杂度难分层。</strong>不分层 → 压出问题不可解释（容量边界究竟来自哪种业务、哪类卡片？）。</li>
+          <li><strong>有效性难判断。</strong>数据"可用 ≠ 结果可信"，需对发包率、异常样本、链路覆盖、回归一致性单独校验。</li>
+        </ol>
+
+        <h2>三、案例 · 点点 0.3.0 的两次迭代</h2>
+
+        <h3>第一版 · 传统流量录制</h3>
+        <ul>
+          <li>从工程侧录线上流量 → 脱敏 UID / Session → 直接发压。</li>
+          <li>结果：首轮上下文压出 20K（线上 12K），TTFB 压出 3s（线上 500ms），<strong>负载结构和线上完全错位</strong>。</li>
+        </ul>
+
+        <h3>第二版 · 引入"线上语料分布"模块</h3>
+        <ul>
+          <li>显式提取线上语料分布、关键词，反推目标配比，让样本更贴线上。</li>
+          <li>把笔记物料从"用户拥有的笔记"换成"用户真实读过的笔记"——通过视频 / 笔记底详接口反推 UID 拼接，避免"have 表式"虚假数据。</li>
+          <li>分布对齐后，TTFB / 首发包出现"流量上涨反而下降"——分析后定位为新用户引导评论场景流量变多，上下文短、token 消耗低。</li>
+        </ul>
+
+        <blockquote>
+          <h4>关于"压测要不要完全贴合线上"</h4>
+          <p>结论：<strong>不能完全贴。</strong>过度拟合线上 = 低估未来负载风险（活动叠加、能力迭代）。压测必须并行设计：① 与线上一致的常规场景，② 单独的极端长上下文 / 极端多轮 / 工具调用专项，二者并行才能既保证今天的稳定性，也为未来留余量。</p>
+        </blockquote>
+
+        <h2>四、有效性校验四件套</h2>
+        <ul>
+          <li><strong>分布校验。</strong>token 区间、长尾比例与放量后的线上是否一致。</li>
+          <li><strong>数据质量。</strong>过滤无效 query、空上下文、异常样本。</li>
+          <li><strong>链路校验。</strong>所有 Throughput / 关键路径节点都被压到。</li>
+          <li><strong>回归校验。</strong>优化前后固定数据卡片，确保结果可比。</li>
+        </ul>
+
+        <h2>五、工程化沉淀 · 数据从哪来、往哪去</h2>
+        <ul>
+          <li><strong>来源混合：</strong>① 工程侧 / Agent 侧线上录制（保真，但低频场景捞不到、不可解释），② 手动按场景模板 + 物料拼接（可控、可解释、可补低频），二者混合。</li>
+          <li><strong>去向分层：</strong>反对一刀切的"全量仿真"——成本高、结论不可解释；改为<em>分场景建模</em>：每个子场景单独建一个负载模型，压测时按权重发压，线上权重变化时只改权重不重做数据。</li>
+        </ul>
+
+        <h2>六、四个核心结论</h2>
+        <ol>
+          <li>数据决定了压测是否可信。</li>
+          <li>压测数据构造的本质是<strong>负载建模</strong>，不是请求构造。</li>
+          <li>高质量数据要同时关注真实性、覆盖度、复杂度。</li>
+          <li>工程化沉淀比一次性造数更重要——一次造的数明天就过期。</li>
+        </ol>
+
+        <h2>七、现场问答精选</h2>
+        <ul>
+          <li><strong>Q · 压测发现瓶颈在模型本身怎么处理？</strong><br>先验证负载是否真的是预期负载（先排压测自己的问题）；再看具体原因（如上下文未压缩导致前缀缓存未命中）；都不行就调外部参数；最后扩卡。</li>
+          <li><strong>Q · 小红书强依赖大模型的功能场景有哪些？</strong><br>主站 AI 助手、评论辅助、点点端攻略 / 提醒、ASR、翻译等。</li>
+          <li><strong>Q · 测试环境算力只有生产 1/10，能否线性外推峰值？</strong><br>不能。功能测试和压测先分开；压测要在和生产对齐配比的测试集群做，不建议线性外推。</li>
+          <li><strong>Q · 有没有量化指标度量"压测和线上接近度"？</strong><br>分两段看：来源数据宽度（卡片类型、L2 类型、图片占比是否一致）；落地表现（前端缓存、新增明细、首包时间是否对齐）。</li>
+        </ul>
+      </div>
+
+      <div class="tab-content" id="tab-3-raw">
+        <div class="transcript-meta"><strong>来源：</strong>现场录音转写 · <strong>时长：</strong>约 43 分钟（含 Q&A） · <strong>格式：</strong>带时间戳逐句稿</div>
+        <div class="transcript-raw" id="raw-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Speech 4 ============ -->
+  <div class="speech open" id="speech-4">
+    <div class="speech-header" onclick="toggleSpeech('speech-4')">
+      <div class="speech-num">4</div>
+      <div class="speech-title-block">
+        <div class="speech-title">LLM 驱动端到端测试体系</div>
+        <div class="speech-meta">
+          <span>肖俊</span><span class="sep">|</span>
+          <span>小红书 · AI 工程架构师</span><span class="sep">|</span>
+          <span>电商测试 / Agent 自主写脚本</span>
+        </div>
+      </div>
+      <div class="toggle-icon">▾</div>
+    </div>
+    <div class="speech-body">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this, 'tab-4-summary')">📝 整理纪要</button>
+        <button class="tab" onclick="switchTab(this, 'tab-4-raw')">🎙️ 录音转写</button>
+      </div>
+
+      <div class="tab-content active md" id="tab-4-summary">
+        <h2>一、为什么端到端测试始终是金字塔的"沉没成本"</h2>
+        <ul>
+          <li>三大特征：<strong>长域 / 长链路 / 组合爆炸。</strong>电商场景 5~6 个领域、新人手工造数 1~2 天、组合数指数级。</li>
+          <li>传统解：原子化封装 + 流程编排（代码 / DSL / 拖拽）。早期很爽、后期腐化——<em>底层封装仍依赖人，业务一抖动整套就要重写</em>。</li>
+          <li>AI 时代的新选择：直接让 AI 感知原生服务接口，扔掉"人工预设流程"这一层。</li>
+        </ul>
+
+        <h2>二、测试执行 Agent 的目标能力</h2>
+        <ul>
+          <li><strong>动态编排：</strong>给一句自然语言诉求 / 用例文本，自动推导出"先调 A、再调 B、最后调 C"的执行计划。</li>
+          <li><strong>韧性执行：</strong>对接口变化、参数错误、异常返回有 retry / 自我修正能力。</li>
+        </ul>
+
+        <h2>三、整体架构</h2>
+        <table>
+          <thead><tr><th>层</th><th>组件</th><th>作用</th></tr></thead>
+          <tbody>
+            <tr><td>接入</td><td>IDE / CLI / 测试同学网页</td><td>多入口</td></tr>
+            <tr><td>规划 + 执行</td><td>测试执行 Agent</td><td>Plan → Q → 执行（宏观），Coding-Agent 框架（微观）</td></tr>
+            <tr><td rowspan="4">能力底座</td><td>业务知识库</td><td>领域 / 跨领域知识</td></tr>
+            <tr><td>接口列表</td><td>每个域内接口的 Schema</td></tr>
+            <tr><td>跨环境网关</td><td>跨号调用、安全管控、流量回放</td></tr>
+            <tr><td>脚本管理（Git）</td><td>检索 / 分发 / 权限</td></tr>
+          </tbody>
+        </table>
+        <p>认知框架混合：<strong>宏观用 Plan-Q（计划 → 校验 → 执行），微观用 Coding-Agent 框架</strong>。前者锁死业务目标不跑偏，后者保证执行细节的鲁棒性。</p>
+
+        <h2>四、关键差异 · 测试 Agent ≠ Coding Agent</h2>
+        <ul>
+          <li>Coding Agent 通用能力强，但<strong>不懂业务</strong>：不知道"纠纷单 = 平台介入"，不熟悉上下游是支付还是结算系统，不熟悉 Schema 优先级。</li>
+          <li>测试 Agent 必须做两件事：<strong>看懂业务 + 写好脚本</strong>。</li>
+        </ul>
+
+        <h2>五、看懂业务 · "动作—实体—属性"三元拆解 + 链式倒推</h2>
+        <ul>
+          <li>把测试诉求拆成 <strong>Action（下单 / 发货 / 结算）/ Entity（订单 / 合约 / 结算单）/ Attribute（实体上的状态 / 值约束）</strong>。</li>
+          <li>从"右端"（最终交易域）倒推：要验证买手对账金额 → 需要结算单 → 需要订单 → 需要合约 → 需要商品 / 用户 / 地址。</li>
+          <li>意图模糊时主动澄清，避免大模型自由发挥。</li>
+        </ul>
+
+        <h2>六、知识库 · 故意不选 RAG</h2>
+        <blockquote>
+          <p>测试领域召回不全 = 漏测。RAG 适合海量信息相关性召回，但<strong>对召回完整性要求极高的测试 Plan 来说不合适</strong>。所以采用"按领域 / 按工具的<em>按需加载</em>"——Plan 阶段先加载交易域，识别到买手依赖再加载买手域，再到商品域，逐层拉 Schema，避免大模型瞎猜。</p>
+        </blockquote>
+
+        <h2>七、写脚本 · Debug-First + 流量回放</h2>
+        <ul>
+          <li>有了 To-Do List → 先用向量召回历史脚本；命中即复用；不命中走 <em>Debug-First</em>：命令行逐个调接口，探索 input / output Schema，再生成脚本。</li>
+          <li>用<strong>流量回放</strong>验证生成脚本——把脚本作为被测对象，用前序 Debug 阶段的 input / output 流量做回归。</li>
+          <li>沉淀两类经验：① 工具级 <code>tip</code>（如 <em>order_id 含分隔符前缀，需先剥版本号再传支付接口</em>）；② 成功路径脚本作为下次召回的参考样本——<strong>10~20 个用例后新用例一次成功率显著上升</strong>。</li>
+        </ul>
+
+        <h2>八、Prompt 实践 · 不是技巧，是结构</h2>
+        <ul>
+          <li>Prompt 的本质是把团队对业务的"规范化描述"喂给模型——COT / Few-Shot 都是表层。</li>
+          <li>"问题拆得足够小、每步都有具体产出物"是稳态执行的关键。模型按填表方式输出，比让它自由发挥要稳定得多。</li>
+          <li>Agent 的另一关键是"记忆"——知识库 + 脚本经验双库联用，提供横向迁移与自我进化能力。</li>
+        </ul>
+
+        <h2>九、落地场景 · 数据构造</h2>
+        <p>切入点选了"<strong>下游业务的造数 = 上游业务的自动化用例</strong>"——把造数解决掉，再上探到运营执行。当前在 10 多个电商类产品上：</p>
+        <ul>
+          <li>未命中缓存：<strong>分钟级</strong>完成造数；命中缓存：秒级。</li>
+          <li>单次成本 ≈ <strong>¥1.5 / $0.20</strong>；优化后预计可再降 20%+。</li>
+          <li>真实演示：<em>"beta 环境购物车购买显卡，手机号 1234..."</em> → Agent 自动拆 Action / Entity → 调度账号 / 地址 / 下单 / 支付链路 → 命中入参错误时自我修正 → 输出订单 + 商品 + 收货地址完整结果。</li>
+        </ul>
+      </div>
+
+      <div class="tab-content" id="tab-4-raw">
+        <div class="transcript-meta"><strong>来源：</strong>现场录音转写 · <strong>时长：</strong>约 35 分钟 · <strong>格式：</strong>带时间戳逐句稿</div>
+        <div class="transcript-raw" id="raw-4"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div>0522 小红书专场 · Agent 驱动的研发效率工程探索与实践 · 内部纪要 · 录音转写整理</div>
+</div>
+
+<script src="transcripts.js"></script>
+<script>
+function toggleSpeech(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+function switchTab(btn, contentId) {
+  const tabs = btn.parentElement;
+  tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const speechBody = btn.closest('.speech-body');
+  speechBody.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(contentId).classList.add('active');
+}
+
+// === 加载录音转写并高亮时间戳 ===
+(function() {
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+  }
+  function fmt(text) {
+    if (!text) return '<em>转写文本未提供</em>';
+    const escaped = escapeHtml(text);
+    return escaped.replace(/(\d{2}:\d{2}:\d{2})\s+(Speaker\s*\d+)/g,
+      '<span class="ts">$1</span> <span class="spk">$2</span>');
+  }
+  const T = window.TRANSCRIPTS || {};
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('raw-' + i);
+    if (el) el.innerHTML = fmt(T['speech' + i] || '');
+  }
+})();
+
+// === Key Takeaways: 自动保存到 localStorage ===
+(function() {
+  const STORAGE_KEY = 'xhs-keynote-takeaways-2026-05-22';
+  const input = document.getElementById('takeaways-input');
+  const status = document.getElementById('takeaways-status');
+  if (!input || !status) return;
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      input.value = saved;
+      status.textContent = '已加载本地草稿';
+      status.classList.add('saved');
+    }
+  } catch (e) {}
+
+  let timer = null;
+  input.addEventListener('input', function() {
+    status.textContent = '正在保存…';
+    status.classList.remove('saved');
+    clearTimeout(timer);
+    timer = setTimeout(function() {
+      try {
+        localStorage.setItem(STORAGE_KEY, input.value);
+        const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        status.textContent = '已保存 · ' + time;
+        status.classList.add('saved');
+      } catch (e) {
+        status.textContent = '保存失败';
+      }
+    }, 600);
+  });
+})();
+
+// === Side Navigation: 跟随滚动 + 高亮 + 移动端开合 ===
+(function() {
+  const sideNav = document.getElementById('side-nav');
+  const toggle = document.getElementById('nav-toggle');
+  if (!sideNav) return;
+
+  const navLinks = sideNav.querySelectorAll('a[data-target]');
+  const sections = Array.from(navLinks).map(a => ({
+    id: a.dataset.target,
+    el: document.getElementById(a.dataset.target),
+    link: a
+  })).filter(s => s.el);
+
+  function onScroll() {
+    const y = window.scrollY;
+    if (y > 200) {
+      sideNav.classList.add('visible');
+    } else {
+      sideNav.classList.remove('visible');
+      sideNav.classList.remove('mobile-open');
+    }
+    let activeIdx = 0;
+    for (let i = 0; i < sections.length; i++) {
+      const rect = sections[i].el.getBoundingClientRect();
+      if (rect.top <= 120) { activeIdx = i; }
+      else { break; }
+    }
+    navLinks.forEach((a, i) => a.classList.toggle('active', i === activeIdx));
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  navLinks.forEach(a => {
+    a.addEventListener('click', function() {
+      const target = document.getElementById(a.dataset.target);
+      if (target && target.classList.contains('speech') && !target.classList.contains('open')) {
+        target.classList.add('open');
+      }
+      sideNav.classList.remove('mobile-open');
+    });
+  });
+
+  if (toggle) {
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      sideNav.classList.toggle('mobile-open');
+    });
+    document.addEventListener('click', function(e) {
+      if (!sideNav.contains(e.target) && e.target !== toggle) {
+        sideNav.classList.remove('mobile-open');
+      }
+    });
+  }
+
+  const backToTop = sideNav.querySelector('.back-to-top');
+  if (backToTop) {
+    backToTop.addEventListener('click', function(e) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      sideNav.classList.remove('mobile-open');
+    });
+  }
+})();
+</script>
+</body>
+</html>
